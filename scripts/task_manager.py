@@ -11,6 +11,7 @@ class TaskManager:
         task_id = str(uuid.uuid4())
         self.tasks_db[task_id] = {"status": "in-progress", "result": None}
         self.tasks_queue.put((func, args, task_id))
+        return task_id
 
     def get_status(self, task_id):
         return self.tasks_db.get(task_id)
