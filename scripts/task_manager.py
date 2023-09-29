@@ -23,7 +23,7 @@ class TaskManager:
                 self.tasks_db[task_id]["result"] = result
 
     def get_all_tasks(self):
-        return self.tasks_db
+        return {k: v["status"] for k, v in self.tasks_db.items()}
 
     def start(self, task_id):
         self.update_status(task_id, "start")

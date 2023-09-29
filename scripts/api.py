@@ -42,7 +42,7 @@ def async_api(_: gr.Blocks, app: FastAPI):
             return {"status": task["status"], "result": task["result"]}
         return {"status": task["status"]}
     
-    @app.get("/kiwi/get_tasks")
+    @app.get("/kiwi/tasks")
     async def get_tasks():
         return task_manager.get_all_tasks()
 
