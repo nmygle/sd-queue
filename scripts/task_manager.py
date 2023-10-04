@@ -7,7 +7,7 @@ from collections import OrderedDict
 class TaskManager:
     def __init__(self, max_task=30):
         self.max_task = max_task
-        self.tasks_db = {}
+        self.tasks_db = OrderedDict()
         self.tasks_queue = Queue()
         self.stop_worker = threading.Event()
         self._worker_start()
