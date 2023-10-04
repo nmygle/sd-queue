@@ -1,10 +1,12 @@
 import uuid
 import threading
 from queue import Queue
+from collections import OrderedDict
 
 
 class TaskManager:
-    def __init__(self):
+    def __init__(self, max_task=30):
+        self.max_task = max_task
         self.tasks_db = {}
         self.tasks_queue = Queue()
         self.stop_worker = threading.Event()
@@ -42,6 +44,8 @@ class TaskManager:
         """taskの追加"""
         task_id = str(uuid.uuid4())
         self.tasks_db[task_id] = {"status": "pending", "result": None}
+        while len(self.tasks_db) > self.max_task:
+            self.tasks_db.popitem(last=False)
         self.tasks_queue.put((func, args, task_id))
         return task_id
 

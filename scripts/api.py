@@ -15,7 +15,7 @@ def async_api(_: gr.Blocks, app: FastAPI):
         if route:
             task_id = task_manager.add_task(route.endpoint, txt2imgreq)
             return {"status": "queued", "task_id": task_id}
-        return {"status": "error", "task_id": task_id}
+        return {"status": "error"}
 
     @app.get("/kiwi/{task_id}/status")
     async def get_task_status(task_id: str):
