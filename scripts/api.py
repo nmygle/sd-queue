@@ -5,7 +5,14 @@ from modules.api import api, models
 from modules import script_callbacks
 from scripts.task_manager import TaskManager
 
-from .libs import send_discord_message
+import requests
+
+def send_discord_message(webhook_url, content):
+    data = {
+        "content": content
+    }
+    response = requests.post(webhook_url, json=data)
+    return response
 
 task_manager = TaskManager()
 
