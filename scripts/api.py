@@ -5,6 +5,7 @@ from modules.api import api, models
 from modules import script_callbacks
 from scripts.task_manager import TaskManager
 
+from .libs import send_discord_message
 
 task_manager = TaskManager()
 
@@ -31,5 +32,13 @@ def async_api(_: gr.Blocks, app: FastAPI):
     @app.get("/kiwi/tasks")
     async def get_tasks():
         return task_manager.get_all_tasks()
+
+    @app.get("kiwi/webhooks/{u0}/{u1}")
+    def send_url(self, u0, u1):
+        from modules import shared
+        webhook_url = f'https://discord.com/api/webhooks/{u0}/{u1}'
+        message = shared.demo.share_url
+        response = send_discord_message(webhook_url, message)
+
 
 script_callbacks.on_app_started(async_api)
