@@ -40,11 +40,12 @@ def async_api(_: gr.Blocks, app: FastAPI):
     async def get_tasks():
         return task_manager.get_all_tasks()
 
-    @app.get("kiwi/webhooks/{u0}/{u1}")
-    def send_url(self, u0, u1):
+    @app.get("/kiwi/webhooks/{u0}/{u1}")
+    def send_url(u0, u1):
         from modules import shared
         webhook_url = f'https://discord.com/api/webhooks/{u0}/{u1}'
         message = shared.demo.share_url
+        print(message)
         response = send_discord_message(webhook_url, message)
 
 
