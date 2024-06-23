@@ -26,13 +26,22 @@ def async_api(_: gr.Blocks, app: FastAPI):
         return {"status": "error"}
 
     @app.get("/kiwi/{task_id}/status")
-    async def get_task_status(task_id: str):
+    async def get_task_status(task_id: str, request: Request):
         task = task_manager.get_status(task_id)
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
 
         if task["status"] == "completed":
             return {"status": task["status"], "result": task["result"]}
+        elif task["status"] == "in-progress":
+            route = next((route for route in request.app.routes if route.path == "/sdapi/v1/progress"), None)
+            if route:
+                progressreq = models.ProgressRequest(skip_current_image=False)
+                info = route.endpoint(progressreq)
+                print(info.progress, info.eta_relative)
+                return {"status": task["status"], "progress": info.progress, "eta_relative": info.eta_relative}
+            else:
+                print("Route /sdapi/v1/progress not found")
         
         return {"status": task["status"]}
     
@@ -48,5 +57,11 @@ def async_api(_: gr.Blocks, app: FastAPI):
         print(message)
         response = send_discord_message(webhook_url, message)
 
+    @app.delete("/kiwi/task/{task_id}")
+    async def remove_specific_task(task_id: str):
+        if task_manager.remove_specific_task(task_id):
+            return {"status": "success", "message": f"タスク {task_id} が削除されました"}
+        else:
+            raise HTTPException(status_code=400, detail="タスクが見つからないか、進行中のため削除できません")
 
 script_callbacks.on_app_started(async_api)
