@@ -34,7 +34,7 @@ def async_api(_: gr.Blocks, app: FastAPI):
 
         raise HTTPException(status_code=401, detail="Incorrect username or password", headers={"WWW-Authenticate": "Basic"})
     
-    @app.post("/kiwi/txt2img", dependencies=[Depends(auth)])
+    @app.post("/sd-queue/txt2img", dependencies=[Depends(auth)])
     async def txt2imgapi(request: Request, txt2imgreq: models.StableDiffusionTxt2ImgProcessingAPI):
         route = next((route for route in request.app.routes if route.path == "/sdapi/v1/txt2img"), None)
         if route:
@@ -42,7 +42,7 @@ def async_api(_: gr.Blocks, app: FastAPI):
             return {"status": "queued", "task_id": task_id}
         return {"status": "error"}
 
-    @app.get("/kiwi/{task_id}/status", dependencies=[Depends(auth)])
+    @app.get("/sd-queue/{task_id}/status", dependencies=[Depends(auth)])
     async def get_task_status(task_id: str, request: Request):
         task = task_manager.get_status(task_id)
         if not task:
@@ -62,12 +62,19 @@ def async_api(_: gr.Blocks, app: FastAPI):
         
         return {"status": task["status"]}
     
-    @app.get("/kiwi/tasks", dependencies=[Depends(auth)])
+    @app.get("/sd-queue/tasks", dependencies=[Depends(auth)])
     async def get_tasks():
         print(opts_credentials)
         return task_manager.get_all_tasks()
 
-    @app.get("/kiwi/webhooks/{u0}/{u1}", dependencies=[Depends(auth)])
+    @app.delete("/sd-queue/remove/{task_id}")
+    async def remove_specific_task(task_id: str):
+        if task_manager.remove_specific_task(task_id):
+            return {"status": "success", "message": f"タスク {task_id} が削除されました"}
+        else:
+            raise HTTPException(status_code=400, detail="タスクが見つからないか、進行中のため削除できません")
+
+    @app.get("/sd-queue/webhooks/{u0}/{u1}", dependencies=[Depends(auth)])
     def send_url(u0, u1):
         from modules import shared
         webhook_url = f'https://discord.com/api/webhooks/{u0}/{u1}'
