@@ -63,3 +63,21 @@ class TaskManager:
         with self.lock:
             return {k: v["status"] for k, v in self.tasks_db.items()}
 
+    def remove_specific_task(self, task_id):
+        """pending taskの削除"""
+        with self.lock:
+            if task_id in self.tasks_db and self.tasks_db[task_id]["status"] == "pending":
+                # tasks_dbから削除
+                del self.tasks_db[task_id]
+                
+                # tasks_queueから削除
+                # 注意: これは非効率的な方法です。大規模なシステムでは別の方法を検討する必要があります。
+                temp_queue = Queue()
+                while not self.tasks_queue.empty():
+                    item = self.tasks_queue.get()
+                    if item[2] != task_id:  # item[2]はtask_id
+                        temp_queue.put(item)
+                self.tasks_queue = temp_queue
+                
+                return True
+        return False
