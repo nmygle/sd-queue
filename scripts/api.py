@@ -67,7 +67,7 @@ def async_api(_: gr.Blocks, app: FastAPI):
         print(opts_credentials)
         return task_manager.get_all_tasks()
 
-    @app.delete("/sd-queue/remove/{task_id}")
+    @app.delete("/sd-queue/{task_id}/remove")
     async def remove_specific_task(task_id: str):
         if task_manager.remove_specific_task(task_id):
             return {"status": "success", "message": f"タスク {task_id} が削除されました"}
