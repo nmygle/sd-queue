@@ -1,8 +1,12 @@
-from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request, Depends
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import gradio as gr
 
 from modules.api import api, models
 from modules import script_callbacks
+import modules.shared as shared
+from secrets import compare_digest
+
 from scripts.task_manager import TaskManager
 
 import requests
@@ -17,7 +21,20 @@ def send_discord_message(webhook_url, content):
 task_manager = TaskManager()
 
 def async_api(_: gr.Blocks, app: FastAPI):
-    @app.post("/kiwi/txt2img")
+    if shared.cmd_opts.api_auth:
+        opts_credentials = {}
+        for auth in shared.cmd_opts.api_auth.split(","):
+            user, password = auth.split(":")
+            opts_credentials[user] = password
+    
+    def auth(credentials: HTTPBasicCredentials = Depends(HTTPBasic())):
+        if credentials.username in opts_credentials:
+            if compare_digest(credentials.password, opts_credentials[credentials.username]):
+                return True
+
+        raise HTTPException(status_code=401, detail="Incorrect username or password", headers={"WWW-Authenticate": "Basic"})
+    
+    @app.post("/kiwi/txt2img", dependencies=[Depends(auth)])
     async def txt2imgapi(request: Request, txt2imgreq: models.StableDiffusionTxt2ImgProcessingAPI):
         route = next((route for route in request.app.routes if route.path == "/sdapi/v1/txt2img"), None)
         if route:
@@ -25,7 +42,7 @@ def async_api(_: gr.Blocks, app: FastAPI):
             return {"status": "queued", "task_id": task_id}
         return {"status": "error"}
 
-    @app.get("/kiwi/{task_id}/status")
+    @app.get("/kiwi/{task_id}/status", dependencies=[Depends(auth)])
     async def get_task_status(task_id: str, request: Request):
         task = task_manager.get_status(task_id)
         if not task:
@@ -45,11 +62,12 @@ def async_api(_: gr.Blocks, app: FastAPI):
         
         return {"status": task["status"]}
     
-    @app.get("/kiwi/tasks")
+    @app.get("/kiwi/tasks", dependencies=[Depends(auth)])
     async def get_tasks():
+        print(opts_credentials)
         return task_manager.get_all_tasks()
 
-    @app.get("/kiwi/webhooks/{u0}/{u1}")
+    @app.get("/kiwi/webhooks/{u0}/{u1}", dependencies=[Depends(auth)])
     def send_url(u0, u1):
         from modules import shared
         webhook_url = f'https://discord.com/api/webhooks/{u0}/{u1}'
