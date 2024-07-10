@@ -38,8 +38,11 @@ def async_api(_: gr.Blocks, app: FastAPI):
     async def txt2imgapi(request: Request, txt2imgreq: models.StableDiffusionTxt2ImgProcessingAPI):
         route = next((route for route in request.app.routes if route.path == "/sdapi/v1/txt2img"), None)
         if route:
-            task_id = task_manager.add_task(route.endpoint, txt2imgreq)
-            return {"status": "queued", "task_id": task_id}
+            task_id, success = task_manager.add_task(route.endpoint, txt2imgreq)
+            if success:
+                return {"status": "queued", "task_id": task_id}
+            else:
+                raise HTTPException(status_code=503, detail="Queue is full")
         return {"status": "error"}
 
     @app.get("/sd-queue/{task_id}/status", dependencies=[Depends(auth)])
@@ -48,19 +51,24 @@ def async_api(_: gr.Blocks, app: FastAPI):
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
 
+        response = {"status": task["status"]}
+
+        if "queue_position" in task:
+            response["queue_position"] = task["queue_position"]
+
         if task["status"] == "completed":
-            return {"status": task["status"], "result": task["result"]}
+            response["result"] = task["result"]
         elif task["status"] == "in-progress":
             route = next((route for route in request.app.routes if route.path == "/sdapi/v1/progress"), None)
             if route:
                 progressreq = models.ProgressRequest(skip_current_image=False)
                 info = route.endpoint(progressreq)
-                # print(info.progress, info.eta_relative)
-                return {"status": task["status"], "progress": info.progress, "eta_relative": info.eta_relative}
+                response["progress"] = info.progress
+                response["eta_relative"] = info.eta_relative
             else:
                 print("Route /sdapi/v1/progress not found")
         
-        return {"status": task["status"]}
+        return response
     
     @app.get("/sd-queue/tasks", dependencies=[Depends(auth)])
     async def get_tasks():
