@@ -42,16 +42,37 @@ class TaskManager:
 
     def add_task(self, func, *args):
         with self.lock:
-            while len(self.tasks_db) >= self.max_task:
+            if len(self.tasks_db) >= self.max_task:
+                # 最も古いタスクを探す
+                oldest_task_id = next(iter(self.tasks_db))
+                oldest_task = self.tasks_db[oldest_task_id]
+                
+                # 最も古いタスクが 'in-progress' または 'pending' の場合
+                if oldest_task['status'] in ['in-progress', 'pending']:
+                    return None, False  # タスクを追加せず、(None, False) を返す
+                
+                # 最も古いタスクが 'completed' または 'failed' の場合
                 self.tasks_db.popitem(last=False)
+                # tasks_queue からも削除（もし存在すれば）
+                self.tasks_queue = deque((f, a, tid) for f, a, tid in self.tasks_queue if tid != oldest_task_id)
+    
+            # 新しいタスクを追加
             task_id = str(uuid.uuid4())
             self.tasks_db[task_id] = {"status": "pending", "result": None}
             self.tasks_queue.append((func, args, task_id))
-        return task_id
+            
+        return task_id, True  # 成功した場合、(task_id, True) を返す
 
     def get_status(self, task_id):
         with self.lock:
-            return self.tasks_db.get(task_id)
+            task = self.tasks_db.get(task_id)
+            if task:
+                if task['status'] == 'pending':
+                    queue_position = sum(1 for _, _, tid in self.tasks_queue if self.tasks_db[tid]['status'] == 'pending' and tid != task_id) + 1
+                    task['queue_position'] = queue_position
+                else:
+                    task['queue_position'] = None
+        return task
 
     def get_all_tasks(self):
         with self.lock:
@@ -60,11 +81,7 @@ class TaskManager:
     def remove_specific_task(self, task_id):
         with self.lock:
             if task_id in self.tasks_db and self.tasks_db[task_id]["status"] == "pending":
-                # tasks_dbから削除
                 del self.tasks_db[task_id]
-                
-                # tasks_queueから削除
                 self.tasks_queue = deque(item for item in self.tasks_queue if item[2] != task_id)
-                
                 return True
         return False
