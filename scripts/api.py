@@ -11,6 +11,8 @@ from scripts.task_manager import TaskManager
 
 import requests
 
+version = "0.0.1"
+
 def send_discord_message(webhook_url, content):
     data = {
         "content": content
@@ -33,6 +35,10 @@ def async_api(_: gr.Blocks, app: FastAPI):
                 return True
 
         raise HTTPException(status_code=401, detail="Incorrect username or password", headers={"WWW-Authenticate": "Basic"})
+
+    @app.get("/sd-queue/login", dependencies=[Depends(auth)])
+    async def login():
+        return {"status": True, "version": version}
     
     @app.post("/sd-queue/txt2img", dependencies=[Depends(auth)])
     async def txt2imgapi(request: Request, txt2imgreq: models.StableDiffusionTxt2ImgProcessingAPI):
