@@ -68,7 +68,8 @@ class TaskManager:
             task = self.tasks_db.get(task_id)
             if task:
                 if task['status'] == 'pending':
-                    queue_position = sum(1 for _, _, tid in self.tasks_queue if self.tasks_db[tid]['status'] == 'pending' and tid != task_id) + 1
+                    pending_tasks = [tid for _, _, tid in self.tasks_queue if self.tasks_db[tid]['status'] == 'pending']
+                    queue_position = pending_tasks.index(task_id) + 1 
                     task['queue_position'] = queue_position
                 else:
                     task['queue_position'] = None
