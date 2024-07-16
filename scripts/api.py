@@ -13,13 +13,6 @@ import requests
 
 version = "0.0.1"
 
-def send_discord_message(webhook_url, content):
-    data = {
-        "content": content
-    }
-    response = requests.post(webhook_url, json=data)
-    return response
-
 task_manager = TaskManager()
 
 def async_api(_: gr.Blocks, app: FastAPI):
@@ -75,11 +68,6 @@ def async_api(_: gr.Blocks, app: FastAPI):
                 print("Route /sdapi/v1/progress not found")
         
         return response
-    
-    @app.get("/sd-queue/tasks", dependencies=[Depends(auth)])
-    async def get_tasks():
-        print(opts_credentials)
-        return task_manager.get_all_tasks()
 
     @app.delete("/sd-queue/{task_id}/remove")
     async def remove_specific_task(task_id: str):
@@ -88,13 +76,9 @@ def async_api(_: gr.Blocks, app: FastAPI):
         else:
             raise HTTPException(status_code=400, detail="タスクが見つからないか、進行中のため削除できません")
 
-    @app.get("/sd-queue/webhooks/{u0}/{u1}", dependencies=[Depends(auth)])
-    def send_url(u0, u1):
-        from modules import shared
-        webhook_url = f'https://discord.com/api/webhooks/{u0}/{u1}'
-        message = shared.demo.share_url
-        print(message)
-        response = send_discord_message(webhook_url, message)
-
+    # @app.get("/sd-queue/tasks", dependencies=[Depends(auth)])
+    # async def get_tasks():
+    #     print(opts_credentials)
+    #     return task_manager.get_all_tasks()
 
 script_callbacks.on_app_started(async_api)
