@@ -15,7 +15,7 @@ version = "0.0.1"
 
 task_manager = TaskManager()
 
-def async_api(_: gr.Blocks, app: FastAPI):
+def async_api(_: gr.Blocks, app: FastAPI):    
     if shared.cmd_opts.api_auth:
         opts_credentials = {}
         for auth in shared.cmd_opts.api_auth.split(","):
@@ -29,11 +29,19 @@ def async_api(_: gr.Blocks, app: FastAPI):
 
         raise HTTPException(status_code=401, detail="Incorrect username or password", headers={"WWW-Authenticate": "Basic"})
 
-    @app.get("/sd-queue/login", dependencies=[Depends(auth)])
+    def auth_required():
+        return shared.cmd_opts.api_auth is not False and shared.cmd_opts.api_auth is not None
+    
+    def get_auth_dependency():
+        if auth_required():
+            return [Depends(auth)]
+        return []
+    
+    @app.get("/sd-queue/login", dependencies=get_auth_dependency())
     async def login():
         return {"status": True, "version": version}
     
-    @app.post("/sd-queue/txt2img", dependencies=[Depends(auth)])
+    @app.post("/sd-queue/txt2img", dependencies=get_auth_dependency())
     async def txt2imgapi(request: Request, txt2imgreq: models.StableDiffusionTxt2ImgProcessingAPI):
         route = next((route for route in request.app.routes if route.path == "/sdapi/v1/txt2img"), None)
         if route:
@@ -44,7 +52,7 @@ def async_api(_: gr.Blocks, app: FastAPI):
                 raise HTTPException(status_code=503, detail="Queue is full")
         return {"status": "error"}
 
-    @app.get("/sd-queue/{task_id}/status", dependencies=[Depends(auth)])
+    @app.get("/sd-queue/{task_id}/status", dependencies=get_auth_dependency())
     async def get_task_status(task_id: str, request: Request):
         task = task_manager.get_status(task_id)
         if not task:
@@ -69,14 +77,14 @@ def async_api(_: gr.Blocks, app: FastAPI):
         
         return response
 
-    @app.delete("/sd-queue/{task_id}/remove")
+    @app.delete("/sd-queue/{task_id}/remove", dependencies=get_auth_dependency())
     async def remove_specific_task(task_id: str):
         if task_manager.remove_specific_task(task_id):
             return {"status": "success", "message": f"タスク {task_id} が削除されました"}
         else:
             raise HTTPException(status_code=400, detail="タスクが見つからないか、進行中のため削除できません")
 
-    # @app.get("/sd-queue/tasks", dependencies=[Depends(auth)])
+    # @app.get("/sd-queue/tasks", dependencies=get_auth_dependency())
     # async def get_tasks():
     #     print(opts_credentials)
     #     return task_manager.get_all_tasks()
