@@ -80,8 +80,8 @@ def async_api(_: gr.Blocks, app: FastAPI):
     @app.delete("/sd-queue/{task_id}/remove", dependencies=get_auth_dependency())
     async def remove_specific_task(task_id: str):
         if task_manager.remove_specific_task(task_id):
-            return {"status": "success", "message": f"タスク {task_id} が削除されました"}
+            return {"status": "success", "message": f"Task {task_id} has been removed"}
         else:
-            raise HTTPException(status_code=400, detail="タスクが見つからないか、進行中のため削除できません")
+            raise HTTPException(status_code=400, detail="Task not found or cannot be removed because it's in progress")
 
 script_callbacks.on_app_started(async_api)
