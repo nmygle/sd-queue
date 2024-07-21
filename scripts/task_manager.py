@@ -47,21 +47,17 @@ class TaskManager:
                 oldest_task_id = next(iter(self.tasks_db))
                 oldest_task = self.tasks_db[oldest_task_id]
                 
-                # 最も古いタスクが 'in-progress' または 'pending' の場合
                 if oldest_task['status'] in ['in-progress', 'pending']:
-                    return None, False  # タスクを追加せず、(None, False) を返す
+                    return None, False
                 
-                # 最も古いタスクが 'completed' または 'failed' の場合
                 self.tasks_db.popitem(last=False)
-                # tasks_queue からも削除（もし存在すれば）
                 self.tasks_queue = deque((f, a, tid) for f, a, tid in self.tasks_queue if tid != oldest_task_id)
     
-            # 新しいタスクを追加
             task_id = str(uuid.uuid4())
             self.tasks_db[task_id] = {"status": "pending", "result": None}
             self.tasks_queue.append((func, args, task_id))
             
-        return task_id, True  # 成功した場合、(task_id, True) を返す
+        return task_id, True
 
     def get_status(self, task_id):
         with self.lock:
