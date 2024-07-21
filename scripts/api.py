@@ -84,9 +84,4 @@ def async_api(_: gr.Blocks, app: FastAPI):
         else:
             raise HTTPException(status_code=400, detail="タスクが見つからないか、進行中のため削除できません")
 
-    # @app.get("/sd-queue/tasks", dependencies=get_auth_dependency())
-    # async def get_tasks():
-    #     print(opts_credentials)
-    #     return task_manager.get_all_tasks()
-
 script_callbacks.on_app_started(async_api)
